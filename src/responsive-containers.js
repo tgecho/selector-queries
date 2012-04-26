@@ -46,25 +46,45 @@ THE SOFTWARE.
     }
 
 
-    function anyFirstItemMatches(hay, needle){
+    function anyItemMatches(hay, needle, index){
         for (var c = hay.length - 1; c >= 0; c--) {
-            if (hay[c][0] == needle) {
+            if (hay[c][index] == needle) {
                 return true;
             }
         }
     }
     function findSelectorQueries() {
         var sheets = document.styleSheets;
-        for (var s = sheets.length - 1; s >= 0; s--) {
-            var rules = sheets[s].rules || sheets[s].cssRules;
+        for (var sh = sheets.length - 1; sh >= 0; sh--) {
+            var rules = sheets[sh].rules || sheets[sh].cssRules;
             for (var r = rules.length - 1; r >= 0; r--) {
                 var selector = rules[r].selectorText;
-                if (selector && selector.indexOf('query="') != -1) {
-                    // 0:before, 1:wholequery, 2:query, 3:after
-                    var selector_parts = selector.split(/(\[query="(.+)"\])/);
-                    if (selector_parts) {
+                if (selector && selector.indexOf('query=') != -1) {
+
+                    // Some browsers (*cough* IE) like to rearrange parts of the selector
+                    // so we have to take it apart with brute force to ensure we can match
+                    // the rest of the selector
+                    var query, query_pos, remains;
+                    var sel_parts = selector.split(' ');
+                    for (var p = 0; p < sel_parts.length; p++) {
+                        var query_parts = /^(.*)(\[query=["'](.+)["']\])(.*)$/.exec(sel_parts[p]);
+                        if (query_parts) {
+                            query_pos = p;
+                            query = query_parts[3];
+                            remains = query_parts[1];
+                            if (query_parts[4]) {
+                                remains = remains + query_parts[4];
+                            }
+                        }
+                    }
+                    var before_query = sel_parts.slice(0, query_pos).join(' ');
+                    var with_query = remains || '';
+                    var after_query = sel_parts.slice(query_pos+1).join(' ');
+
+                    if (query) {
+                        // Parse out all of the queries in the selector
                         var cq_rules = [];
-                        var raw_rules = selector_parts[2].split(" ");
+                        var raw_rules = query.split(",");
                         var rules_classes = [];
                         for (var k = raw_rules.length - 1; k >= 0; k--) {
                             var class_name = 'query-' + raw_rules[k].replace(':', '-');
@@ -76,22 +96,30 @@ THE SOFTWARE.
                             }
                         }
 
-                        var new_selector = selector.replace(selector_parts[1], rules_classes.join(''));
+                        // Rewrite the selector to match the new query class
+                        var new_selector = [before_query, with_query+rules_classes.join(''), after_query].join(' ');
                         rules[r].selectorText = new_selector;
+                        blah = rules[r].selectorText;
                         if (rules[r].selectorText != new_selector) {
-                            // Firefox doesn't support just changing the selectorText,
-                            // so we copy the rule with the new selector
-                            if (sheets[s].insertRule) {
+                            if (sheets[sh].insertRule) {
+                                // Firefox doesn't support just changing the selectorText,
+                                // so we make a copy of the rule with the new selector
                                 var new_rule = rules[r].cssText.replace(rules[r].selectorText, new_selector);
-                                sheets[s].insertRule(new_rule, r);
+                                sheets[sh].insertRule(new_rule, r);
+                            } else if (sheets[sh].addRule) {
+                                // Unfortunately IE<9 has an inferior addRule that doesn't
+                                // the rule's position to be specified. This may affect the
+                                // cascade of the stylesheet
+                                sheets[sh].addRule(new_selector, rules[r].style.cssText);
                             }
                         }
 
-                        var nodes = document.querySelectorAll(selector_parts[0]);
+                        // Add the query information to the elements
+                        var nodes = document.querySelectorAll([before_query, with_query].join(' '));
                         for (var i = nodes.length - 1; i >= 0; i--) {
                             var el = nodes[i];
                             el.cq_rules = el.cq_rules || [];
-                            if (!anyFirstItemMatches(el.cq_rules, selector_parts[2])) {
+                            if (!anyItemMatches(el.cq_rules, query, 1)) {
                                 el.cq_rules = el.cq_rules.concat(cq_rules);
                                 els.push(el);
                             }
