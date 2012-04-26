@@ -119,6 +119,7 @@ THE SOFTWARE.
                         for (var i = nodes.length - 1; i >= 0; i--) {
                             var el = nodes[i];
                             el.cq_rules = el.cq_rules || [];
+                            // We don't want duplicate queries on an element
                             if (!anyItemMatches(el.cq_rules, query, 1)) {
                                 el.cq_rules = el.cq_rules.concat(cq_rules);
                                 els.push(el);
