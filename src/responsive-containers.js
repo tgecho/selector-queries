@@ -1,7 +1,7 @@
 /*
 MIT Licensed.
 Copyright (c) 2011 Andy Hume (http://andyhume.net, andyhume@gmail.com).
- 
+
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
@@ -43,6 +43,63 @@ THE SOFTWARE.
 
     function ignoreDataAttributes() {
         check_data_attributes = false;
+    }
+
+
+    function anyFirstItemMatches(hay, needle){
+        for (var c = hay.length - 1; c >= 0; c--) {
+            if (hay[c][0] == needle) {
+                return true;
+            }
+        }
+    }
+    function findSelectorQueries() {
+        var sheets = document.styleSheets;
+        for (var s = sheets.length - 1; s >= 0; s--) {
+            var rules = sheets[s].rules || sheets[s].cssRules;
+            for (var r = rules.length - 1; r >= 0; r--) {
+                var selector = rules[r].selectorText;
+                if (selector && selector.indexOf('query="') != -1) {
+                    // 0:before, 1:wholequery, 2:query, 3:after
+                    var selector_parts = selector.split(/(\[query="(.+)"\])/);
+                    if (selector_parts) {
+                        var cq_rules = [];
+                        var raw_rules = selector_parts[2].split(" ");
+                        var rules_classes = [];
+                        for (var k = raw_rules.length - 1; k >= 0; k--) {
+                            var class_name = 'query-' + raw_rules[k].replace(':', '-');
+                            rules_classes.push('.' + class_name);
+                            var rule = /(.*):([0-9]*)(px|em)/.exec(raw_rules[k]);
+                            rule.push(class_name);
+                            if (rule) {
+                                cq_rules.push(rule);
+                            }
+                        }
+
+                        var new_selector = selector.replace(selector_parts[1], rules_classes.join(''));
+                        rules[r].selectorText = new_selector;
+                        if (rules[r].selectorText != new_selector) {
+                            // Firefox doesn't support just changing the selectorText,
+                            // so we copy the rule with the new selector
+                            if (sheets[s].insertRule) {
+                                var new_rule = rules[r].cssText.replace(rules[r].selectorText, new_selector);
+                                sheets[s].insertRule(new_rule, r);
+                            }
+                        }
+
+                        var nodes = document.querySelectorAll(selector_parts[0]);
+                        for (var i = nodes.length - 1; i >= 0; i--) {
+                            var el = nodes[i];
+                            el.cq_rules = el.cq_rules || [];
+                            if (!anyFirstItemMatches(el.cq_rules, selector_parts[2])) {
+                                el.cq_rules = el.cq_rules.concat(cq_rules);
+                                els.push(el);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     function findContainerQueries() {
@@ -99,7 +156,7 @@ THE SOFTWARE.
                         el.className += " " + rule[4];
                     }
                 } else {
-                    var class_name = el.className.replace(new RegExp('(^| )'+rule[4]+'( |$)'), '$1'); 
+                    var class_name = el.className.replace(new RegExp('(^| )'+rule[4]+'( |$)'), '$1');
                     class_name = class_name.replace(/ $/, '');
                     el.className = class_name;
                 }
@@ -122,6 +179,7 @@ THE SOFTWARE.
         }
         loaded = true;
         findContainerQueries();
+        findSelectorQueries();
         applyRules();
         if (win.addEventListener) {
             win.addEventListener("resize", applyRules, false);

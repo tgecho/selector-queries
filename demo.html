@@ -3,16 +3,16 @@
 <head>
     <meta charset="utf-8" />
     <title>Responsive Containers Test Page</title>
-    <script src="responsive-containers.min.js"></script>
+    <script src="src/responsive-containers.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-    
+
         body {
             background-color: #333;
             font-family: helvetica, arial, sans-serif;
             font-size: 13px;
         }
-    
+
         .stage {
             background-color: #FFF;
             width: 80%;
@@ -20,7 +20,7 @@
             overflow: hidden;
             padding: 2em 2em 200px 2em;
         }
-    
+
         .unit {
             float: left;
         }
@@ -30,10 +30,10 @@
         .size2of3 {
             width: 66%;
         }
-        
+
         .menu {
            margin: 1em 1em 1em 0;
-           padding: 0; 
+           padding: 0;
         }
         .menu li {
             list-style: none;
@@ -60,15 +60,15 @@
         .menu li:first-child a {
             border-top: 1px solid #AAA;
         }
-        .menu.wide li {
+        .menu[query="min-width:30em"] li {
             float: left;
             list-style: none;
         }
-        .menu.wide img {
+        .menu[query="min-width:30em"] img {
             display: block;
             margin-bottom: 1em;
         }
-        .menu.wide li a {
+        .menu[query="min-width:30em"] li a {
             border: none;
             text-align: center;
         }
@@ -90,16 +90,16 @@
 
         <h1>Responsive Containers Test Page</h1>
         <p>The two menus below both have identical HTML but are presented differently depending on their current width. At a 'typical' browser width and font size the menu in the smaller column simply lists the links. In the larger column it displays extra images and lays out the options in a grid.</p>
-        <p>This is achieved with a small piece of JavaScript, which is activated by the code shown below.</p>
-        <p class="codex"><code>&lt;ul class=<span class="attr">"my-list"</span> data-squery=<span class="attr">"min-width:30em=wide"</span>&gt;</code></p>
-        <p>Adding the <code>data-squery</code> attribute above causes a class value of <code>wide</code> to be added to the element when it is wider than 30 ems, and extra CSS is applied to the element based on that class value.</p>
+        <p>This is achieved with a small piece of JavaScript, which is activated by using css selectors as shown below.</p>
+        <p class="codex"><code>.menu[query="min-width:30em"] li {...}</code></p>
+        <p>Adding the <code>query</code> attribute selector above causes a class named <code>.query-min-width-30em</code> to be added to the element when it is wider than 30 ems, and the selector itself is rewritten to use that class.</p>
         <p>Currently you can use <code>em</code> or <code>px</code> units.</p>
 
         <div class="unit size1of3">
-            
+
             <h2>Menu</h2>
-            
-            <ul class="menu" data-squery="min-width:30em=wide">
+
+            <ul class="menu">
                 <li>
                     <a href="#"><img src="http://dummyimage.com/100x100" alt="">
                     Item 1</a>
@@ -121,13 +121,13 @@
                     Item 5</a>
                 </li>
             </ul>
-            
+
         </div>
-        
+
         <div class="unit size2of3">
-            
+
             <h2>Menu</h2>
-            <ul class="menu" data-squery="min-width:30em=wide">
+            <ul class="menu">
                 <li>
                     <a href="#"><img src="http://dummyimage.com/100x100" alt="">
                     Item 1</a>
@@ -150,12 +150,12 @@
                 </li>
             </ul>
         </div>
-        
-        
+
+
         <p class="meta"><small>Find the code: <a href="https://github.com/ahume/selector-queries">https://github.com/ahume/selector-queries</a></small></p>
-        
+
     </div>
-    
+
 
     <script>
 
