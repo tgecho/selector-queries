@@ -13,11 +13,19 @@
             height: 20px;
             background: red;
         }
+        #test-big[query="min-width:400px"] {
+            height: 10px;
+        	background: green;
+        }
 	    #test-small {
 	        width: 300px;
-	        height: 20px;
-	        background: yellow;
+            height: 10px;
+	        background: green;
 	    }
+        #test-small[query="min-width:400px"] {
+	        height: 20px;
+        	background: red;
+        }
 	</style>
 
 </head>
@@ -29,7 +37,7 @@
 	<ol id="qunit-tests"></ol>
 
 	<!-- elements for applying css via queries -->
-	<div id="test-big" data-squery="min-width:400px=wide"></div>
+	<div id="test-big"></div>
 	<div id="test-small"></div>
 
 </body>

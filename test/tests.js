@@ -1,13 +1,24 @@
+function getStyle(el, styleProp) {
+	// From http://www.quirksmode.org/dom/getstyles.html
+	var y;
+	if (el.currentStyle) {
+		y = el.currentStyle[styleProp];
+	} else if (window.getComputedStyle) {
+		y = document.defaultView.getComputedStyle(el, null).getPropertyValue(styleProp);
+	}
+	return y;
+}
+
 window.onload = function() {
-    
+
     var test_small = document.getElementById("test-small");
     var test_big = document.getElementById("test-big");
-    
-    test("big element has a wide class name", function() {
-        ok(test_big.className.indexOf("wide"), "Value should be wide");
+
+    test("Matching element", function() {
+        equal(getStyle(test_big, 'height'), '10px', "Large element should match");
     });
-    
-    test("small element has no wide class name", function() {
-        equal(test_small.className.indexOf("wide"), -1, "Value should not be wide");
+
+    test("Not matching element", function() {
+        equal(getStyle(test_small, 'height'), '10px', "Small element should not match");
     });
-}
+};
