@@ -101,8 +101,7 @@ THE SOFTWARE.
 
                         // Rewrite the selector to match the new query class
                         var new_selector = [before_query, with_query+rules_classes.join(''), after_query].join(' ');
-                        rules[r].selectorText = new_selector;
-                        blah = rules[r].selectorText;
+                        try { rules[r].selectorText = new_selector; } catch(err) {}
                         if (rules[r].selectorText != new_selector) {
                             if (sheets[sh].insertRule) {
                                 // Firefox doesn't support just changing the selectorText,
