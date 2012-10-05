@@ -56,7 +56,7 @@ THE SOFTWARE.
     function findSelectorQueries() {
         var sheets = document.styleSheets;
         for (var sh = sheets.length - 1; sh >= 0; sh--) {
-            try { // Firefox raises a SecurityError on external stylesheets
+            try { // At least Firefox raises a SecurityError on external stylesheets (without CORS?)
                 var rules = sheets[sh].rules || sheets[sh].cssRules;
             } catch(err) { continue; }
             if (!rules) { continue; }
