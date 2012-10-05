@@ -56,79 +56,100 @@ THE SOFTWARE.
     function findSelectorQueries() {
         var sheets = document.styleSheets;
         for (var sh = sheets.length - 1; sh >= 0; sh--) {
+            var rules;
             try { // At least Firefox raises a SecurityError on external stylesheets (without CORS?)
-                var rules = sheets[sh].rules || sheets[sh].cssRules;
+                rules = sheets[sh].rules || sheets[sh].cssRules;
             } catch(err) { continue; }
             if (!rules) { continue; }
             for (var r = rules.length - 1; r >= 0; r--) {
                 var selector = rules[r].selectorText;
                 if (selector && selector.indexOf('query=') != -1) {
-
-                    // Some browsers (*cough* IE) like to rearrange parts of the selector
-                    // so we have to take it apart with brute force to ensure we can match
-                    // the rest of the selector
-                    var query, query_pos, remains;
-                    var sel_parts = selector.split(' ');
-                    for (var p = 0; p < sel_parts.length; p++) {
-                        var query_parts = /^(.*)(\[query=["'](.+)["']\])(.*)$/.exec(sel_parts[p]);
-                        if (query_parts) {
-                            query_pos = p;
-                            query = query_parts[3];
-                            remains = query_parts[1];
-                            if (query_parts[4]) {
-                                remains = remains + query_parts[4];
-                            }
-                        }
-                    }
-                    var before_query = sel_parts.slice(0, query_pos).join(' ');
-                    var with_query = remains || '';
-                    var after_query = sel_parts.slice(query_pos+1).join(' ');
-
-                    if (query) {
-                        // Parse out all of the queries in the selector
-                        var cq_rules = [];
-                        var raw_rules = query.split(",");
-                        var rules_classes = [];
-                        for (var k = raw_rules.length - 1; k >= 0; k--) {
-                            var class_name = 'query-' + raw_rules[k].replace(':', '-');
-                            rules_classes.push('.' + class_name);
-                            var rule = /(.*):([0-9]*)(px|em)/.exec(raw_rules[k]);
-                            rule.push(class_name);
-                            if (rule) {
-                                cq_rules.push(rule);
-                            }
-                        }
-
-                        // Rewrite the selector to match the new query class
-                        var new_selector = [before_query, with_query+rules_classes.join(''), after_query].join(' ');
-                        try { rules[r].selectorText = new_selector; } catch(err) {}
-                        if (rules[r].selectorText != new_selector) {
-                            if (sheets[sh].insertRule) {
-                                // Firefox doesn't support just changing the selectorText,
-                                // so we make a copy of the rule with the new selector
-                                var new_rule = rules[r].cssText.replace(rules[r].selectorText, new_selector);
-                                sheets[sh].insertRule(new_rule, r);
-                            } else if (sheets[sh].addRule) {
-                                // Unfortunately IE<9 has an inferior addRule that doesn't
-                                // the rule's position to be specified. This may affect the
-                                // cascade of the stylesheet
-                                sheets[sh].addRule(new_selector, rules[r].style.cssText);
-                            }
-                        }
-
-                        // Add the query information to the elements
-                        var nodes = document.querySelectorAll([before_query, with_query].join(' '));
-                        for (var i = nodes.length - 1; i >= 0; i--) {
-                            var el = nodes[i];
-                            el.cq_rules = el.cq_rules || [];
-                            // We don't want duplicate queries on an element
-                            if (!anyItemMatches(el.cq_rules, query, 1)) {
-                                el.cq_rules = el.cq_rules.concat(cq_rules);
-                                els.push(el);
-                            }
-                        }
-                    }
+                    parsed_query = parseSelectorQuery(selector);
+                    rewriteSelector(sheets[sh], rules[r], r, parsed_query);
+                    addElementsToWatchlist(parsed_query);
                 }
+            }
+        }
+    }
+    function parseSelectorQuery(selector) {
+        // Some browsers (*cough* IE) like to rearrange parts of the selector
+        // so we have to take it apart with brute force to ensure we can match
+        // the rest of the selector
+        var query, query_pos, remains;
+        var sel_parts = selector.split(' ');
+        for (var p = 0; p < sel_parts.length; p++) {
+            var query_parts = /^(.*)(\[query=["'](.+)["']\])(.*)$/.exec(sel_parts[p]);
+            if (query_parts) {
+                query_pos = p;
+                query = query_parts[3];
+                remains = query_parts[1];
+                if (query_parts[4]) {
+                    remains = remains + query_parts[4];
+                }
+            }
+        }
+        // This tracks the parts of the selector that occur around the query
+        // (.before .with[query="..."] .after)
+        var before_query = sel_parts.slice(0, query_pos).join(' ');
+        var with_query = remains || '';
+        var after_query = sel_parts.slice(query_pos+1).join(' ');
+
+        if (query) {
+            // Parse out all of the queries in the selector
+            var cq_rules = [];
+            var raw_rules = query.split(",");
+            var query_classes = [];
+            for (var k = raw_rules.length - 1; k >= 0; k--) {
+                var class_name = 'query-' + raw_rules[k].replace(':', '-');
+                query_classes.push('.' + class_name);
+                var tweaked_rule = /(.*):([0-9]*)(px|em)/.exec(raw_rules[k]);
+                tweaked_rule.push(class_name);
+                if (tweaked_rule) {
+                    cq_rules.push(tweaked_rule);
+                }
+            }
+            return {
+                query: query,
+                before_query: before_query,
+                with_query: with_query,
+                after_query: after_query,
+                query_classes: query_classes,
+                cq_rules: cq_rules
+            };
+        }
+    }
+    function rewriteSelector(stylesheet, rule, rule_position, parsed) {
+        // Rewrite the selector to match the new query class
+        var new_selector = [
+            parsed.before_query,
+            parsed.with_query+parsed.query_classes.join(''),
+            parsed.after_query
+        ].join(' ');
+        try { rule.selectorText = new_selector; } catch(err) {}
+        if (rule.selectorText != new_selector) {
+            if (stylesheet.insertRule) {
+                // Firefox doesn't support just changing the selectorText,
+                // so we make a copy of the rule with the new selector
+                var new_rule = rule.cssText.replace(rule.selectorText, new_selector);
+                stylesheet.insertRule(new_rule, rule_position);
+            } else if (stylesheet.addRule) {
+                // Unfortunately IE<9 has an inferior addRule that doesn't
+                // the rule's position to be specified. This may affect the
+                // cascade of the stylesheet
+                stylesheet.addRule(new_selector, rule.style.cssText);
+            }
+        }
+    }
+    function addElementsToWatchlist(parsed) {
+        // Add the query information to the elements
+        var nodes = document.querySelectorAll([parsed.before_query, parsed.with_query].join(' '));
+        for (var i = nodes.length - 1; i >= 0; i--) {
+            var el = nodes[i];
+            el.cq_rules = el.cq_rules || [];
+            // We don't want duplicate queries on an element
+            if (!anyItemMatches(el.cq_rules, parsed.query, 1)) {
+                el.cq_rules = el.cq_rules.concat(parsed.cq_rules);
+                els.push(el);
             }
         }
     }
