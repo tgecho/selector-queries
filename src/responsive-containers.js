@@ -26,6 +26,7 @@ THE SOFTWARE.
     var doc = win.document,
         els = [],
         check_data_attributes = true,
+        watch_font_sizes = true,
         loaded = false;
 
     function add(elements, query, value, class_name) {
@@ -43,6 +44,9 @@ THE SOFTWARE.
 
     function ignoreDataAttributes() {
         check_data_attributes = false;
+    }
+    function ignoreFontChanges() {
+        watch_font_sizes = false;
     }
 
 
@@ -236,15 +240,17 @@ THE SOFTWARE.
         if (win.addEventListener) {
             win.addEventListener("resize", applyRules, false);
         }
-        // Allow for resizing text after the page has loaded.
-        var current_em = emsToPixels(1, doc.body);
-        win.setInterval(function() {
-            var new_em = emsToPixels(1, doc.body);
-            if (new_em !== current_em) {
-                applyRules();
-                current_em = new_em;
-            }
-        }, 100);
+        if (watch_font_sizes) {
+            // Allow for resizing text after the page has loaded.
+            var current_em = emsToPixels(1, doc.body);
+            win.setInterval(function() {
+                var new_em = emsToPixels(1, doc.body);
+                if (new_em !== current_em) {
+                    applyRules();
+                    current_em = new_em;
+                }
+            }, 100);
+        }
     }
 
     function memoize( f ) {
