@@ -25,8 +25,6 @@ THE SOFTWARE.
 
     var doc = win.document,
         els = [],
-        check_data_attributes = true,
-        watch_font_sizes = true,
         loaded = false;
 
     function add(elements, query, value, class_name) {
@@ -41,14 +39,6 @@ THE SOFTWARE.
             applyRules();
         }
     }
-
-    function ignoreDataAttributes() {
-        check_data_attributes = false;
-    }
-    function ignoreFontChanges() {
-        watch_font_sizes = false;
-    }
-
 
     function anyItemMatches(hay, needle, index){
         for (var c = hay.length - 1; c >= 0; c--) {
@@ -158,39 +148,6 @@ THE SOFTWARE.
         }
     }
 
-    function findContainerQueries() {
-        if (check_data_attributes) {
-            // Find data-squery attributes.
-            var nodes = [];
-            if (doc.querySelectorAll) {
-                var nodes = doc.querySelectorAll("[data-squery]");
-            } else {
-                // If no query selectors.
-                var e = doc.getElementsByTagName("*");
-                for (var i = 0, j = e.length; i<j; ++i) {
-                    if (e[i].getAttribute("data-squery")) {
-                        nodes.push(e[i]);
-                    }
-                }
-            }
-            // Parse the data-squery attribute and store resulting rules on the element.
-            for (var i = 0, j = nodes.length; i<j; ++i) {
-                var el = nodes[i];
-                var cq_rules = [];
-                var raw_rules = el.getAttribute("data-squery").split(" ");
-                for (var k = 0, l = raw_rules.length; k<l; ++k) {
-                    var rule = /(.*):([0-9]*)(px|em)=(.*)/.exec(raw_rules[k]);
-                    if (rule) {
-                        cq_rules.push(rule);
-                    }
-                }
-                el.cq_rules = el.cq_rules || [];
-                el.cq_rules = el.cq_rules.concat(cq_rules);
-                els.push(el);
-            }
-        }
-    }
-
     function applyRules() {
         // For each element, apply the rules to the class name.
         for (var i = 0, j = els.length; i<j; ++i) {
@@ -227,29 +184,17 @@ THE SOFTWARE.
         "max-width": function(a, b) {
             return a < b;
         }
-    }
+    };
 
     function contentReady() {
         if (loaded) {
             return;
         }
         loaded = true;
-        findContainerQueries();
         findSelectorQueries();
         applyRules();
         if (win.addEventListener) {
             win.addEventListener("resize", applyRules, false);
-        }
-        if (watch_font_sizes) {
-            // Allow for resizing text after the page has loaded.
-            var current_em = emsToPixels(1, doc.body);
-            win.setInterval(function() {
-                var new_em = emsToPixels(1, doc.body);
-                if (new_em !== current_em) {
-                    applyRules();
-                    current_em = new_em;
-                }
-            }, 100);
         }
     }
 
@@ -286,7 +231,7 @@ THE SOFTWARE.
         var val = test.offsetWidth;
         parent.removeChild(test);
         return val;
-    }
+    };
 
     if (doc.addEventListener) {
         doc.addEventListener("DOMContentLoaded", contentReady, false);
@@ -302,8 +247,7 @@ THE SOFTWARE.
 
 
     win["SelectorQueries"] = {
-        "add": add,
-        "ignoreDataAttributes": ignoreDataAttributes
-    }
+        "add": add
+    };
 
 })(this);
