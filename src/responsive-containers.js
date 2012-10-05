@@ -56,7 +56,10 @@ THE SOFTWARE.
     function findSelectorQueries() {
         var sheets = document.styleSheets;
         for (var sh = sheets.length - 1; sh >= 0; sh--) {
-            var rules = sheets[sh].rules || sheets[sh].cssRules;
+            try { // Firefox raises a SecurityError on external stylesheets
+                var rules = sheets[sh].rules || sheets[sh].cssRules;
+            } catch(err) { continue; }
+            if (!rules) { continue; }
             for (var r = rules.length - 1; r >= 0; r--) {
                 var selector = rules[r].selectorText;
                 if (selector && selector.indexOf('query=') != -1) {
